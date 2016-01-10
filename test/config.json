@@ -1,10 +1,10 @@
 {
   "in": {
-    "txt": {
+    "js": {
       "transformers": {
         "name": ".",
         "options": {
-          "errorText": "error"
+          "entrypoint": "test/input.js"
         }
       }
     }
