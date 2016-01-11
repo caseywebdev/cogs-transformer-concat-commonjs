@@ -226,5 +226,6 @@ require('.');
 Cogs.define('test/input.js', ['test/input'], function (require, exports, module) {
 require('./foo');
 require(SHOULD_BE_DISREGARDED);
+require('fs');
 });
 Cogs.require('./test/input.js');

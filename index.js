@@ -26,11 +26,15 @@ var getNames = function (file, options, cb) {
 
 var getRequires = function (file, options, cb) {
   async.map(detective(file.buffer.toString()), function (name, cb) {
+    if (resolve.isCore(name)) return cb();
     resolve(name, options.resolve, function (er, filePath) {
       if (er) return cb(er);
       return cb(null, path.relative('.', filePath));
     });
-  }, cb);
+  }, function (er, filePaths) {
+    if (er) return cb(er);
+    cb(null, _.compact(filePaths));
+  });
 };
 
 var wrapWithNames = function (file, options, names) {
