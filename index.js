@@ -7,7 +7,8 @@ var resolve = require('resolve');
 var RESOLVER_PATH = path.relative('.', path.join(__dirname, 'module-resolver'));
 
 var DEFAULTS = {
-  extensions: ['js']
+  extensions: ['js'],
+  ignore: []
 };
 
 var getNames = function (file, options, cb) {
@@ -26,7 +27,7 @@ var getNames = function (file, options, cb) {
 
 var getRequires = function (file, options, cb) {
   async.map(detective(file.buffer.toString()), function (name, cb) {
-    if (resolve.isCore(name)) return cb();
+    if (_.includes(options.ignore, name)) return cb();
     resolve(name, options.resolve, function (er, filePath) {
       if (er) return cb(er);
       return cb(null, path.relative('.', filePath));

@@ -4,7 +4,10 @@
       "transformers": {
         "name": ".",
         "options": {
-          "entrypoint": "test/input.js"
+          "entrypoint": "test/input.js",
+          "ignore": [
+            "fs"
+          ]
         }
       }
     }
