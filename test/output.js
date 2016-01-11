@@ -219,14 +219,17 @@ var Cogs = (function () {
 })();
 Cogs.define('test/bar.js', ['test/bar', 'test'], function (require, exports, module) {
 // This is bar!
+
 });
 Cogs.define('test/foo.js', ['test/foo'], function (require, exports, module) {
 // This is foo!
 require('.');
+
 });
 Cogs.define('test/input.js', ['test/input'], function (require, exports, module) {
 require('./foo');
 require(SHOULD_BE_DISREGARDED);
 require('fs');
+
 });
 Cogs.require('./test/input.js');

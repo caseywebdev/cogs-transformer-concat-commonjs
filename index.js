@@ -46,7 +46,9 @@ var wrapWithNames = function (file, options, names) {
             return "'" + name + "'";
           }).join(', ') +
       '], ' +
-      'function (require, exports, module) {\n' + file.buffer + '}' +
+      'function (require, exports, module) {\n' +
+        file.buffer + '\n' +
+      '}' +
     ');\n' +
     (
       options.entrypoint === file.path ?
