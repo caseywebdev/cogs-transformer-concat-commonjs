@@ -7,7 +7,7 @@ var resolve = require('resolve');
 var RESOLVER_PATH = path.relative('.', path.join(__dirname, 'module-resolver'));
 
 var DEFAULTS = {
-  extensions: ['js'],
+  extensions: ['.js'],
   ignore: []
 };
 
@@ -63,12 +63,9 @@ module.exports = function (file, options, cb) {
   try {
     options = _.extend({}, DEFAULTS, options);
 
-    // The resolve function expects extensions to have a leading '.'.
     options.resolve = {
       basedir: path.dirname(file.path),
-      extensions: _.map(options.extensions, function (extension) {
-        return '.' + extension;
-      })
+      extensions: options.extensions
     };
 
     async.parallel({
