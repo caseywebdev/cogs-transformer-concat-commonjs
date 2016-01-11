@@ -210,7 +210,8 @@ var Cogs = (function () {
       if (!module) throw new Error("Cannot find module '" + name + "'");
       if (module.isResolved) return module.exports;
       module.isResolved = true;
-      return module.factory(getRequire(module.path), module.exports, module);
+      module.factory(getRequire(module.path), module.exports, module);
+      return module.exports;
     };
   };
 
