@@ -196,7 +196,7 @@ var Cogs = (function () {
 
   var getRequire = function (path) {
     var basedir = posix.dirname(path);
-    var refs = module[path] && module[path].refs || {};
+    var refs = modules[path] && modules[path].refs || {};
     return function (name) {
       var module;
       var ref = refs[name];
