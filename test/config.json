@@ -1,15 +1,16 @@
 {
-  "in": {
-    "js": {
-      "transformers": {
-        "name": ".",
-        "options": {
-          "entrypoint": "test/input.js",
-          "ignore": [
-            "fs"
-          ]
+  "pipe": [
+    {
+      "name": ".",
+      "only": "**/*.+(js|bologna)",
+      "options": {
+        "entrypoint": "test/input.js",
+        "extensions": [".js", ".bologna"],
+        "ignore": ["fs"],
+        "modules": {
+          "baz": "./test/baz.bologna"
         }
       }
     }
-  }
+  ]
 }

@@ -13,8 +13,11 @@ helper.run({
         path: 'test/bar.js',
         hash: helper.getFileHash('test/bar.js')
       }, {
-        path: 'test/foo.js',
-        hash: helper.getFileHash('test/foo.js')
+        path: 'test/foo.bologna',
+        hash: helper.getFileHash('test/foo.bologna')
+      }, {
+        path: 'test/baz.bologna',
+        hash: helper.getFileHash('test/baz.bologna')
       }, {
         path: 'test/input.js',
         hash: helper.getFileHash('test/input.js')

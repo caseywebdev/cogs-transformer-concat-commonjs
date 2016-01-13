@@ -221,14 +221,19 @@ Cogs.define('test/bar.js', ['test/bar', 'test'], function (require, exports, mod
 // This is bar!
 
 });
-Cogs.define('test/foo.js', ['test/foo'], function (require, exports, module) {
+Cogs.define('test/foo.bologna', ['test/foo'], function (require, exports, module) {
 // This is foo!
 require('.');
+
+});
+Cogs.define('test/baz.bologna', ['test/baz'], function (require, exports, module) {
+// This is baz!
 
 });
 Cogs.define('test/input.js', ['test/input'], function (require, exports, module) {
 require('./foo');
 require(SHOULD_BE_DISREGARDED);
+require('baz');
 require('fs');
 
 });

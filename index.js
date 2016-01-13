@@ -2,7 +2,7 @@ var _ = require('underscore');
 var async = require('async');
 var detective = require('detective');
 var path = require('path');
-var resolve = require('resolve');
+var resolve = require('browser-resolve');
 
 var RESOLVER_PATH = path.relative('.', path.join(__dirname, 'module-resolver'));
 
@@ -16,10 +16,10 @@ var getNames = function (file, options, cb) {
   var dir = path.join(parsed.dir, parsed.name);
   var names = [dir];
   while (dir !== '.') names.push(dir = path.dirname(dir));
-  var resolveOptions = _.omit(options.resolve, 'basedir');
+  options = _.omit(options, 'filename');
   var abs = path.resolve(file.path);
   async.filter(names, function (name, cb) {
-    resolve(path.resolve(name), resolveOptions, function (er, filePath) {
+    resolve(path.resolve(name), options, function (er, filePath) {
       cb(!er && filePath === abs);
     });
   }, _.partial(cb, null));
@@ -28,7 +28,7 @@ var getNames = function (file, options, cb) {
 var getRequires = function (file, options, cb) {
   async.map(detective(file.buffer.toString()), function (name, cb) {
     if (_.includes(options.ignore, name)) return cb();
-    resolve(name, options.resolve, function (er, filePath) {
+    resolve(name, options, function (er, filePath) {
       if (er) return cb(er);
       return cb(null, path.relative('.', filePath));
     });
@@ -61,12 +61,7 @@ var wrapWithNames = function (file, options, names) {
 
 module.exports = function (file, options, cb) {
   try {
-    options = _.extend({}, DEFAULTS, options);
-
-    options.resolve = {
-      basedir: path.dirname(file.path),
-      extensions: options.extensions
-    };
+    options = _.extend({}, DEFAULTS, options, {filename: file.path});
 
     async.parallel({
       names: _.partial(getNames, file, options),
