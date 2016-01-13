@@ -65,7 +65,7 @@ module.exports = function (file, options, cb) {
       refs: _.partial(getRefs, file, resolve)
     }, (er, result) => {
       if (er) return cb(er);
-      const i = file.requires.indexOf(file);
+      const i = file.requires.indexOf(file.path);
       cb(null, {
         buffer: new Buffer(wrap(file, options, result)),
         requires: [].concat(
