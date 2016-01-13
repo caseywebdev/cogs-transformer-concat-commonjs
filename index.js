@@ -35,7 +35,7 @@ const getRefs = (file, resolve, cb) =>
       _.partial(resolve, name),
       (filePath, cb) => cb(null, [name, filePath])
     ], cb),
-    (er, pairs) => cb(er, _.object(pairs))
+    (er, pairs) => cb(er, !er && _.object(pairs))
   );
 
 const wrap = (file, options, result) =>
