@@ -230,11 +230,18 @@ Cogs.define('test/baz.bologna', ['test/baz'], function (require, exports, module
 // This is baz!
 
 });
+Cogs.define('test/no-extension', ['test/no-extension'], function (require, exports, module) {
+// I have no extension =(
+
+});
 Cogs.define('test/input.js', ['test/input'], function (require, exports, module) {
 require('./foo');
+require('./bar.js');
 require(SHOULD_BE_DISREGARDED);
+require('.');
 require('baz');
 require('fs');
+require('./no-extension');
 
 });
 Cogs.require('./test/input.js');

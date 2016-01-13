@@ -2,14 +2,13 @@
   "pipe": [
     {
       "name": ".",
-      "only": "**/*.+(js|bologna)",
+      "only": [
+        "**/*.+(js|bologna)",
+        "test/no-extension"
+      ],
       "options": {
         "entrypoint": "test/input.js",
-        "extensions": [".js", ".bologna"],
-        "ignore": ["fs"],
-        "modules": {
-          "baz": "./test/baz.bologna"
-        }
+        "extensions": [".js", ".bologna"]
       }
     }
   ]

@@ -1,44 +1,40 @@
-var _ = require('underscore');
-var async = require('async');
-var detective = require('detective');
-var path = require('path');
-var resolve = require('browser-resolve');
+'use strict';
 
-var RESOLVER_PATH = path.relative('.', path.join(__dirname, 'module-resolver'));
+const _ = require('underscore');
+const async = require('async');
+const detective = require('detective');
+const path = require('path');
+const createResolver = require('enhanced-resolve').create;
 
-var DEFAULTS = {
-  extensions: ['.js'],
-  ignore: []
+const RESOLVER_PATH =
+  path.relative('.', path.join(__dirname, 'module-resolver'));
+
+const DEFAULTS = {
+  aliasFields: ['browser'],
+  extensions: ['.js']
 };
 
-var getNames = function (file, options, cb) {
-  var parsed = path.parse(file.path);
-  var dir = path.join(parsed.dir, parsed.name);
-  var names = [dir];
-  while (dir !== '.') names.push(dir = path.dirname(dir));
-  options = _.omit(options, 'filename');
-  var abs = path.resolve(file.path);
-  async.filter(names, function (name, cb) {
-    resolve(path.resolve(name), options, function (er, filePath) {
-      cb(!er && filePath === abs);
-    });
-  }, _.partial(cb, null));
+const getPossibleDirs = file => {
+  const parsed = path.parse(file.path);
+  let dir = path.join(parsed.dir, parsed.name);
+  const dirs = [dir];
+  while (dir !== '.') dirs.push(dir = path.dirname(dir));
+  return dirs;
 };
 
-var getRequires = function (file, options, cb) {
-  async.map(detective(file.buffer.toString()), function (name, cb) {
-    if (_.includes(options.ignore, name)) return cb();
-    resolve(name, options, function (er, filePath) {
-      if (er) return cb(er);
-      return cb(null, path.relative('.', filePath));
-    });
-  }, function (er, filePaths) {
-    if (er) return cb(er);
-    cb(null, _.compact(filePaths));
-  });
-};
+const getNames = (file, resolve, cb) =>
+  async.filter(getPossibleDirs(file), (dir, cb) =>
+    resolve(path.resolve(dir), (er, filePath) =>
+      cb(!er && filePath === file.path)
+    )
+  , _.partial(cb, null));
 
-var wrapWithNames = function (file, options, names) {
+const getRequires = (file, resolve, cb) =>
+  async.map(detective(file.buffer.toString()), resolve, (er, filePaths) =>
+    cb(er, _.compact(filePaths))
+  );
+
+const wrapWithNames = function (file, options, names) {
   return (
     'Cogs.define(' +
       "'" + file.path + "', " +
@@ -61,16 +57,28 @@ var wrapWithNames = function (file, options, names) {
 
 module.exports = function (file, options, cb) {
   try {
-    options = _.extend({}, DEFAULTS, options, {filename: file.path});
+    options = _.extend({}, DEFAULTS, options);
+    const resolver = createResolver(options);
+    const basedir = path.dirname(path.resolve(file.path));
+    const resolve = (name, cb) =>
+      resolver(basedir, name, (er, filePath) =>
+        cb(er, filePath && path.relative('.', filePath))
+      );
 
     async.parallel({
-      names: _.partial(getNames, file, options),
-      requires: _.partial(getRequires, file, options)
-    }, function (er, results) {
+      names: _.partial(getNames, file, resolve),
+      requires: _.partial(getRequires, file, resolve)
+    }, (er, results) => {
       if (er) return cb(er);
+      const i = file.requires.indexOf(file);
       cb(null, {
         buffer: new Buffer(wrapWithNames(file, options, results.names)),
-        requires: [].concat(RESOLVER_PATH, results.requires, file.requires)
+        requires: [].concat(
+          file.requires.slice(0, i),
+          RESOLVER_PATH,
+          results.requires,
+          file.requires.slice(i)
+        )
       });
     });
   } catch (er) { cb(er); }

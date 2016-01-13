@@ -19,6 +19,9 @@ helper.run({
         path: 'test/baz.bologna',
         hash: helper.getFileHash('test/baz.bologna')
       }, {
+        path: 'test/no-extension',
+        hash: helper.getFileHash('test/no-extension')
+      }, {
         path: 'test/input.js',
         hash: helper.getFileHash('test/input.js')
       }],

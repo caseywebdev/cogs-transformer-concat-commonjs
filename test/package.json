@@ -1,3 +1,7 @@
 {
-  "main": "bar.js"
+  "main": "bar.js",
+  "browser": {
+    "baz": "./baz.bologna",
+    "fs": false
+  }
 }
