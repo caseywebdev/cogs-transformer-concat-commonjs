@@ -188,17 +188,21 @@ var Cogs = (function () {
 
   var modules = {};
 
-  var define = function (path, names, factory) {
-    var module = {path: path, factory: factory, exports: {}};
+  var define = function (path, names, refs, factory) {
+    var module = {path: path, refs: refs, factory: factory, exports: {}};
     modules[path] = module;
     for (var i = 0, l = names.length; i < l; ++i) modules[names[i]] = module;
   };
 
   var getRequire = function (path) {
     var basedir = posix.dirname(path);
+    var refs = module[path] && module[path].refs || {};
     return function (name) {
       var module;
-      if (name[0] === '.') module = modules[posix.resolve(basedir, name)];
+      var ref = refs[name];
+      if (ref === false) return {};
+      else if (ref) module = modules[ref];
+      else if (name[0] === '.') module = modules[posix.resolve(basedir, name)];
       else {
         var dir = basedir;
         while (!module) {
@@ -217,24 +221,24 @@ var Cogs = (function () {
 
   return {modules: modules, define: define, require: getRequire('.')};
 })();
-Cogs.define('test/bar.js', ['test/bar', 'test'], function (require, exports, module) {
+Cogs.define("test/bar.js", ["test/bar","test"], {}, function (require, exports, module) {
 // This is bar!
 
 });
-Cogs.define('test/foo.bologna', ['test/foo'], function (require, exports, module) {
+Cogs.define("test/foo.bologna", ["test/foo"], {".":"test/bar.js"}, function (require, exports, module) {
 // This is foo!
 require('.');
 
 });
-Cogs.define('test/baz.bologna', ['test/baz'], function (require, exports, module) {
+Cogs.define("test/baz.bologna", ["test/baz"], {}, function (require, exports, module) {
 // This is baz!
 
 });
-Cogs.define('test/no-extension', ['test/no-extension'], function (require, exports, module) {
+Cogs.define("test/no-extension", ["test/no-extension"], {}, function (require, exports, module) {
 // I have no extension =(
 
 });
-Cogs.define('test/input.js', ['test/input'], function (require, exports, module) {
+Cogs.define("test/input.js", ["test/input"], {"./foo":"test/foo.bologna","./bar.js":"test/bar.js",".":"test/bar.js","baz":"test/baz.bologna","fs":false,"./no-extension":"test/no-extension"}, function (require, exports, module) {
 require('./foo');
 require('./bar.js');
 require(SHOULD_BE_DISREGARDED);
@@ -244,4 +248,4 @@ require('fs');
 require('./no-extension');
 
 });
-Cogs.require('./test/input.js');
+Cogs.require("./test/input.js");

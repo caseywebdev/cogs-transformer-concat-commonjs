@@ -188,17 +188,21 @@ var Cogs = (function () {
 
   var modules = {};
 
-  var define = function (path, names, factory) {
-    var module = {path: path, factory: factory, exports: {}};
+  var define = function (path, names, refs, factory) {
+    var module = {path: path, refs: refs, factory: factory, exports: {}};
     modules[path] = module;
     for (var i = 0, l = names.length; i < l; ++i) modules[names[i]] = module;
   };
 
   var getRequire = function (path) {
     var basedir = posix.dirname(path);
+    var refs = module[path] && module[path].refs || {};
     return function (name) {
       var module;
-      if (name[0] === '.') module = modules[posix.resolve(basedir, name)];
+      var ref = refs[name];
+      if (ref === false) return {};
+      else if (ref) module = modules[ref];
+      else if (name[0] === '.') module = modules[posix.resolve(basedir, name)];
       else {
         var dir = basedir;
         while (!module) {

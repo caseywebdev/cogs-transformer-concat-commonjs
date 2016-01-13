@@ -29,31 +29,26 @@ const getNames = (file, resolve, cb) =>
     )
   , _.partial(cb, null));
 
-const getRequires = (file, resolve, cb) =>
-  async.map(detective(file.buffer.toString()), resolve, (er, filePaths) =>
-    cb(er, _.compact(filePaths))
+const getRefs = (file, resolve, cb) =>
+  async.map(detective(file.buffer.toString()), (name, cb) =>
+    async.waterfall([
+      _.partial(resolve, name),
+      (filePath, cb) => cb(null, [name, filePath])
+    ], cb),
+    (er, pairs) => cb(er, _.object(pairs))
   );
 
-const wrapWithNames = function (file, options, names) {
-  return (
-    'Cogs.define(' +
-      "'" + file.path + "', " +
-      '[' +
-          _.map(names, function (name) {
-            return "'" + name + "'";
-          }).join(', ') +
-      '], ' +
-      'function (require, exports, module) {\n' +
-        file.buffer + '\n' +
-      '}' +
-    ');\n' +
-    (
-      options.entrypoint === file.path ?
-      "Cogs.require('./" + file.path + "');\n" :
-      ''
-    )
+const wrap = (file, options, result) =>
+  'Cogs.define(' +
+    JSON.stringify(file.path) + ', ' +
+    JSON.stringify(result.names) + ', ' +
+    JSON.stringify(result.refs) + ', ' +
+    `function (require, exports, module) {\n${file.buffer}\n}` +
+  ');\n' + (
+    options.entry === file.path ?
+    `Cogs.require(${JSON.stringify(`./${file.path}`)});\n` :
+    ''
   );
-};
 
 module.exports = function (file, options, cb) {
   try {
@@ -67,16 +62,16 @@ module.exports = function (file, options, cb) {
 
     async.parallel({
       names: _.partial(getNames, file, resolve),
-      requires: _.partial(getRequires, file, resolve)
-    }, (er, results) => {
+      refs: _.partial(getRefs, file, resolve)
+    }, (er, result) => {
       if (er) return cb(er);
       const i = file.requires.indexOf(file);
       cb(null, {
-        buffer: new Buffer(wrapWithNames(file, options, results.names)),
+        buffer: new Buffer(wrap(file, options, result)),
         requires: [].concat(
           file.requires.slice(0, i),
           RESOLVER_PATH,
-          results.requires,
+          _.compact(_.values(result.refs)),
           file.requires.slice(i)
         )
       });

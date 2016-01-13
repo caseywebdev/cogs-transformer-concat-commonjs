@@ -7,7 +7,7 @@
         "test/no-extension"
       ],
       "options": {
-        "entrypoint": "test/input.js",
+        "entry": "test/input.js",
         "extensions": [".js", ".bologna"]
       }
     }
