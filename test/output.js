@@ -211,7 +211,9 @@ var Cogs = (function () {
           dir = posix.dirname(dir);
         }
       }
-      if (!module) throw new Error("Cannot find module '" + name + "'");
+      if (!module) {
+        throw new Error("Can't resolve '" + name + "' in '" + path + "'");
+      }
       if (module.isResolved) return module.exports;
       module.isResolved = true;
       module.factory(getRequire(module.path), module.exports, module);
@@ -219,7 +221,12 @@ var Cogs = (function () {
     };
   };
 
-  return {modules: modules, define: define, require: getRequire('.')};
+  return {
+    modules: modules,
+    define: define,
+    getRequire: getRequire,
+    require: getRequire('.')
+  };
 })();
 Cogs.define("test/bar.js", ["test/bar","test"], {}, function (require, exports, module) {
 // This is bar!
