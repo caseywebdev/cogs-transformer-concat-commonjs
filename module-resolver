@@ -188,28 +188,37 @@ var Cogs = (function () {
 
   var modules = {};
 
-  var define = function (path, names, refs, factory) {
-    var module = {path: path, refs: refs, factory: factory, exports: {}};
-    modules[path] = module;
-    for (var i = 0, l = names.length; i < l; ++i) modules[names[i]] = module;
+  var define = function (path, searchPaths, aliases, resolutions, factory) {
+    var module = modules[path] = {
+      path: path,
+      searchPaths: searchPaths,
+      resolutions: resolutions,
+      factory: factory,
+      exports: {}
+    };
+    for (var i = 0, l = aliases.length; i < l; ++i) {
+      modules[aliases[i]] = module;
+    }
   };
 
   var getRequire = function (path) {
     var basedir = posix.dirname(path);
-    var refs = modules[path] && modules[path].refs || {};
+    var requirer = modules[path] || {};
+    var resolutions = requirer.resolutions || {};
+    var searchPaths = requirer.searchPaths || [];
     return function (name) {
       var module;
-      var ref = refs[name];
-      if (ref === false) return {};
-      else if (ref) module = modules[ref];
+      var resolution = resolutions[name];
+      if (resolution === false) return {};
+      else if (resolution) module = modules[resolution];
       else if (name[0] === '.') module = modules[posix.resolve(basedir, name)];
       else {
         var dir = basedir;
-        while (!module) {
-          module = modules[posix.join(dir, 'node_modules', name)];
-          if (dir === '.') break;
-          dir = posix.dirname(dir);
-        }
+        do {
+          for (var i = 0, l = searchPaths.length; !module && i < l; ++i) {
+            module = modules[posix.join(dir, searchPaths[i], name)];
+          }
+        } while (!module && dir !== '.' && (dir = posix.dirname(dir)));
       }
       if (!module) {
         throw new Error("Can't resolve '" + name + "' in '" + path + "'");

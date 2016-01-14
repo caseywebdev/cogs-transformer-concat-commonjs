@@ -11,7 +11,8 @@ const RESOLVER_PATH =
 
 const DEFAULTS = {
   aliasFields: ['browser'],
-  extensions: ['.js']
+  extensions: ['.js'],
+  modules: ['node_modules']
 };
 
 const getPossibleDirs = file => {
@@ -29,7 +30,7 @@ const getNames = (file, resolve, cb) =>
     )
   , _.partial(cb, null));
 
-const getRefs = (file, resolve, cb) =>
+const getResolutions = (file, resolve, cb) =>
   async.map(detective(file.buffer.toString()), (name, cb) =>
     async.waterfall([
       _.partial(resolve, name),
@@ -41,8 +42,9 @@ const getRefs = (file, resolve, cb) =>
 const wrap = (file, options, result) =>
   'Cogs.define(' +
     JSON.stringify(file.path) + ', ' +
+    JSON.stringify(options.modules) + ', ' +
     JSON.stringify(result.names) + ', ' +
-    JSON.stringify(result.refs) + ', ' +
+    JSON.stringify(result.resolutions) + ', ' +
     `function (require, exports, module) {\n${file.buffer}\n}` +
   ');\n' + (
     options.entry === file.path ?
@@ -62,7 +64,7 @@ module.exports = function (file, options, cb) {
 
     async.parallel({
       names: _.partial(getNames, file, resolve),
-      refs: _.partial(getRefs, file, resolve)
+      resolutions: _.partial(getResolutions, file, resolve)
     }, (er, result) => {
       if (er) return cb(er);
       const i = file.requires.indexOf(file.path);
@@ -71,7 +73,7 @@ module.exports = function (file, options, cb) {
         requires: [].concat(
           file.requires.slice(0, i),
           RESOLVER_PATH,
-          _.compact(_.values(result.refs)),
+          _.compact(_.values(result.resolutions)),
           file.requires.slice(i)
         )
       });
