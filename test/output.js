@@ -1,4 +1,4 @@
-var Cogs = (function () {
+var Cogs = this && this.Cogs || (function () {
   'use strict';
 
   // BEGIN: Copyright Node.js contributors. All rights reserved.
