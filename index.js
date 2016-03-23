@@ -11,6 +11,7 @@ const RESOLVER_PATH =
 
 const DEFAULTS = {
   aliasFields: ['browser'],
+  mainFields: ['browser', 'main'],
   extensions: ['.js'],
   modules: ['node_modules']
 };
