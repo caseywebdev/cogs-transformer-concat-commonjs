@@ -3,7 +3,7 @@
 const _ = require('underscore');
 const async = require('async');
 const detective = require('detective');
-const path = require('path');
+const path = require('npath');
 const createResolver = require('enhanced-resolve').create;
 
 const RESOLVER_PATH =
