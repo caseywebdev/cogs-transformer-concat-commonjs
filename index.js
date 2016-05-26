@@ -2,9 +2,10 @@
 
 const _ = require('underscore');
 const async = require('async');
+const createResolver = require('enhanced-resolve').create;
 const detective = require('detective');
 const path = require('npath');
-const createResolver = require('enhanced-resolve').create;
+const sep = require('path').sep;
 
 const RESOLVER_PATH =
   path.relative('.', path.join(__dirname, 'module-resolver'));
@@ -57,7 +58,9 @@ module.exports = function (file, options, cb) {
   try {
     options = _.extend({}, DEFAULTS, options);
     const resolver = createResolver(options);
-    const basedir = path.dirname(path.resolve(file.path));
+
+    // enhanced-resolve requires the input basedir to be split on path.sep...
+    const basedir = path.dirname(path.resolve(file.path)).split('/').join(sep);
     const resolve = (name, cb) =>
       resolver(basedir, name, (er, filePath) =>
         cb(er, filePath && path.relative('.', filePath))
