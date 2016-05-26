@@ -5,3 +5,6 @@ require('.');
 require('baz');
 require('fs');
 require('./no-extension');
+require('./one/1');
+require('./one/two/2');
+require('./one/two/three/3');

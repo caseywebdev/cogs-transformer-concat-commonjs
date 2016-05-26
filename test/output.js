@@ -92,7 +92,19 @@ Cogs.define("test/no-extension", ["node_modules"], ["test/no-extension"], {}, fu
 // I have no extension =(
 
 });
-Cogs.define("test/input.js", ["node_modules"], ["test/input"], {"./foo":"test/foo.bologna","./bar.js":"test/bar.js",".":"test/bar.js","baz":"test/baz.bologna","fs":false,"./no-extension":"test/no-extension"}, function (require, exports, module) {
+Cogs.define("test/one/1.js", ["node_modules"], ["test/one/1"], {"../foo":"test/foo.bologna"}, function (require, exports, module) {
+require('../foo');
+
+});
+Cogs.define("test/one/two/2.js", ["node_modules"], ["test/one/two/2"], {"../../foo":"test/foo.bologna"}, function (require, exports, module) {
+require('../../foo');
+
+});
+Cogs.define("test/one/two/three/3.js", ["node_modules"], ["test/one/two/three/3"], {"../../../foo":"test/foo.bologna"}, function (require, exports, module) {
+require('../../../foo');
+
+});
+Cogs.define("test/input.js", ["node_modules"], ["test/input"], {"./foo":"test/foo.bologna","./bar.js":"test/bar.js",".":"test/bar.js","baz":"test/baz.bologna","fs":false,"./no-extension":"test/no-extension","./one/1":"test/one/1.js","./one/two/2":"test/one/two/2.js","./one/two/three/3":"test/one/two/three/3.js"}, function (require, exports, module) {
 require('./foo');
 require('./bar.js');
 require(SHOULD_BE_DISREGARDED);
@@ -100,6 +112,9 @@ require('.');
 require('baz');
 require('fs');
 require('./no-extension');
+require('./one/1');
+require('./one/two/2');
+require('./one/two/three/3');
 
 });
 Cogs.require("./test/input.js");

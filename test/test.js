@@ -22,6 +22,15 @@ helper.run({
         path: 'test/no-extension',
         hash: helper.getFileHash('test/no-extension')
       }, {
+        path: 'test/one/1.js',
+        hash: helper.getFileHash('test/one/1.js')
+      }, {
+        path: 'test/one/two/2.js',
+        hash: helper.getFileHash('test/one/two/2.js')
+      }, {
+        path: 'test/one/two/three/3.js',
+        hash: helper.getFileHash('test/one/two/three/3.js')
+      }, {
         path: 'test/input.js',
         hash: helper.getFileHash('test/input.js')
       }],
