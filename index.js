@@ -32,10 +32,10 @@ const getNames = ({file, resolve}) =>
     )
   )).then(_.compact);
 
-const getResolutions = ({file, resolve}) =>
-  Promise.all(_.map(detective(file.buffer.toString()), name =>
+const getResolutions = ({file: {buffer}, resolve}) =>
+  Promise.all(_.map(detective(buffer.toString()), name =>
     resolve(name).then(filePath => [name, filePath])
-  )).then(pairs => _.object(pairs));
+  )).then(_.object);
 
 const wrap = ({file, options, names, resolutions}) =>
   'Cogs.define(' +
