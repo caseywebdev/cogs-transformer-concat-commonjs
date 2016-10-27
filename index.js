@@ -6,8 +6,7 @@ const detective = require('detective');
 const path = require('npath');
 const sep = require('path').sep;
 
-const RESOLVER_PATH =
-  path.relative('.', path.join(__dirname, 'module-resolver'));
+const RESOLVER_PATH = path.relative('.', path.join(__dirname, 'resolver.js'));
 
 const DEFAULTS = {
   aliasFields: ['browser'],
@@ -39,10 +38,10 @@ const getResolutions = ({file: {buffer}, resolve}) =>
 
 const wrap = ({file, options, names, resolutions}) =>
   'Cogs.define(' +
-    JSON.stringify(file.path) + ', ' +
-    JSON.stringify(options.modules) + ', ' +
-    JSON.stringify(names) + ', ' +
-    JSON.stringify(resolutions) + ', ' +
+    `${JSON.stringify(file.path)}, ` +
+    `${JSON.stringify(options.modules)}, ` +
+    `${JSON.stringify(names)}, ` +
+    `${JSON.stringify(resolutions)}, ` +
     `function (require, exports, module) {\n${file.buffer}\n}` +
   ');\n' + (
     options.entry === file.path ?
@@ -51,6 +50,10 @@ const wrap = ({file, options, names, resolutions}) =>
   );
 
 module.exports = ({file, options}) => {
+
+  // Avoid an infinite loop by not resolving the resolver.
+  if (file.path === RESOLVER_PATH) return;
+
   options = _.extend({}, DEFAULTS, options);
   const resolver = createResolver(options);
 
