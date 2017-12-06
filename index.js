@@ -1,55 +1,100 @@
-'use strict';
-
 const _ = require('underscore');
+const {sep} = require('path');
+const acornDynamicImport = require('acorn-dynamic-import/lib/inject').default;
+const acornVanilla = require('acorn');
 const createResolver = require('enhanced-resolve').create;
-const detective = require('detective');
 const path = require('npath');
-const sep = require('path').sep;
+const walk = require('acorn/dist/walk');
+
+const acorn = acornDynamicImport(acornVanilla);
+
+// HACK: See https://github.com/kesne/acorn-dynamic-import/pull/10
+walk.base.Import = _.noop;
 
 const RESOLVER_PATH = path.relative('.', path.join(__dirname, 'resolver.js'));
 
 const DEFAULTS = {
   aliasFields: ['browser'],
-  mainFields: ['browser', 'main'],
   extensions: ['.js'],
+  mainFields: ['browser', 'main'],
   modules: ['node_modules']
 };
 
-const getPossibleDirs = file => {
-  const parsed = path.parse(file.path);
-  let dir = path.join(parsed.dir, parsed.name);
-  const dirs = [dir];
-  while (dir !== '.') dirs.push(dir = path.dirname(dir));
-  return dirs;
-};
-
-const getNames = ({file, resolve}) =>
-  Promise.all(_.map(getPossibleDirs(file), dir =>
-    resolve(path.resolve(dir)).then(
-      filePath => filePath === file.path && dir,
-      () => false
-    )
-  )).then(_.compact);
-
-const getResolutions = ({file: {buffer}, resolve}) =>
-  Promise.all(_.map(detective(buffer.toString()), name =>
-    resolve(name).then(filePath => [name, filePath])
-  )).then(_.object);
-
-const wrap = ({file, options, names, resolutions}) =>
-  'Cogs.define(' +
-    `${JSON.stringify(file.path)}, ` +
-    `${JSON.stringify(options.modules)}, ` +
-    `${JSON.stringify(names)}, ` +
-    `${JSON.stringify(resolutions)}, ` +
-    `function (require, exports, module) {\n${file.buffer}\n}` +
-  ');\n' + (
-    options.entry === file.path ?
-    `Cogs.require(${JSON.stringify(`./${file.path}`)});\n` :
-    ''
+const isImportNode = ({callee: {name, object, property, type}}) =>
+  type === 'Import' ||
+  (type === 'Identifier' && name === 'require') ||
+  (
+    type === 'MemberExpression' &&
+    object.type === 'Identifier' &&
+    object.name === 'require' &&
+    property.type === 'Identifier' &&
+    property.name === 'async'
   );
 
-module.exports = ({file, options}) => {
+const getImportNodes = source => {
+  const nodes = [];
+  walk.simple(
+    acorn.parse(source, {ecmaVersion: 9, plugins: {dynamicImport: true}}),
+    {CallExpression: node => isImportNode(node) && nodes.push(node)}
+  );
+  return nodes;
+};
+
+const getResolutions = async ({resolve, source}) =>
+  Promise.all(_.map(getImportNodes(source), async node => {
+    const arg = node.arguments[0];
+    return {
+      node,
+      result: arg && _.isString(arg.value) ? await resolve(arg.value) : null
+    };
+  }));
+
+const applyResolutions = ({resolutions, source}) => {
+  const builds = [];
+  const requires = [];
+  let cursor = 0;
+  const chunks = [];
+  _.each(resolutions, ({node, result}) => {
+    chunks.push(source.slice(cursor, node.start));
+    cursor = result === null ? node.callee.end : node.end;
+    if (node.callee.type === 'Identifier') {
+      if (result === null) {
+        chunks.push('COGS_REQUIRE');
+      } else if (result === false) {
+        chunks.push('undefined');
+      } else {
+        requires.push(result);
+        chunks.push(`COGS_REQUIRE(${JSON.stringify(result)})`);
+      }
+    } else if (result === null) {
+      chunks.push('COGS_REQUIRE.async');
+    } else if (result === false) {
+      chunks.push('Promise.resolve()');
+    } else {
+      builds.push(result);
+      chunks.push(`COGS_REQUIRE.async(${JSON.stringify(result)})`);
+    }
+  });
+  chunks.push(source.slice(cursor, source.length));
+  return {builds, requires, source: chunks.join('')};
+};
+
+const applyResolve = async ({file, resolve}) => {
+  const source = file.buffer.toString();
+  const resolutions = await getResolutions({resolve, source});
+  return applyResolutions({resolutions, source});
+};
+
+const wrap = ({entry, path, source}) =>
+  'Cogs.define(' +
+    `${JSON.stringify(path)}, ` +
+    'function (COGS_REQUIRE, module, exports) {\n' +
+      `${source.trim()}\n` +
+    '}' +
+  ');\n' +
+  (entry === path ? `Cogs.require(${JSON.stringify(path)});\n` : '');
+
+module.exports = async ({file, options}) => {
 
   // Avoid an infinite loop by not resolving the resolver.
   if (file.path === RESOLVER_PATH) return;
@@ -66,19 +111,16 @@ module.exports = ({file, options}) => {
       )
     );
 
-  return Promise.all([
-    getNames({file, resolve}),
-    getResolutions({file, resolve})
-  ]).then(([names, resolutions]) => {
-    const i = file.requires.indexOf(file.path);
-    return {
-      buffer: new Buffer(wrap({file, options, names, resolutions})),
-      requires: [].concat(
-        file.requires.slice(0, i),
-        RESOLVER_PATH,
-        _.compact(_.values(resolutions)),
-        file.requires.slice(i)
-      )
-    };
-  });
+  const {builds, requires, source} = await applyResolve({file, resolve});
+  const requiresIndex = file.requires.indexOf(file.path);
+  return {
+    buffer: new Buffer(wrap({entry: options.entry, path: file.path, source})),
+    builds: [].concat(file.builds, builds),
+    requires: [].concat(
+      file.requires.slice(0, requiresIndex),
+      RESOLVER_PATH,
+      requires,
+      file.requires.slice(requiresIndex)
+    )
+  };
 };

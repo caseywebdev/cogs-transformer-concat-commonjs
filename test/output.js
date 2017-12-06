@@ -2,119 +2,75 @@ var Cogs = this && this.Cogs || (function () {
   'use strict';
 
   var modules = {};
+  var loads = {};
 
-  var define = function (path, searchPaths, aliases, resolutions, factory) {
-    var module = modules[path] = {
-      path: path,
-      searchPaths: searchPaths,
-      resolutions: resolutions,
-      factory: factory,
-      exports: {}
-    };
-    for (var i = 0, l = aliases.length; i < l; ++i) {
-      modules[aliases[i]] = module;
-    }
+  var define = function (path, factory) {
+    modules[path] = {exports: {}, factory: factory, path: path};
   };
 
-  var normalize = function (path) {
-    var parts = path.split('/');
-    var stack = [];
-    for (var i = 0, l = parts.length; i < l; ++i) {
-      var part = parts[i];
-      if (!part || part === '.') continue;
-      if (part === '..' && stack.length && stack[stack.length] !== '..') {
-        stack.pop();
-      } else stack.push(part);
-    }
-    return stack.join('/') || '.';
-  };
+  var require = function (path) {
+    var module = modules[path];
+    if (!module) throw new Error(`Cannot find module '${path}'`);
 
-  var dirRe = /^([\s\S]*?)\/*[^\/]+?\/*$/;
-
-  var dirname = function (path) {
-    return normalize(dirRe.exec(path)[1] || '.');
-  };
-
-  var join = function () {
-    return normalize([].slice.call(arguments).join('/'));
-  };
-
-  var getRequire = function (path) {
-    var basedir = dirname(path);
-    var requirer = modules[path] || {};
-    var resolutions = requirer.resolutions || {};
-    var searchPaths = requirer.searchPaths || [];
-    return function (name) {
-      var module;
-      var resolution = resolutions[name];
-      if (resolution === false) return {};
-      else if (resolution) module = modules[resolution];
-      else if (name[0] === '.') module = modules[join(basedir, name)];
-      else {
-        var dir = basedir;
-        do {
-          for (var i = 0, l = searchPaths.length; !module && i < l; ++i) {
-            module = modules[join(dir, searchPaths[i], name)];
-          }
-        } while (!module && dir !== '.' && (dir = dirname(dir)));
-      }
-      if (!module) {
-        throw new Error("Can't resolve '" + name + "' in '" + path + "'");
-      }
-      if (module.isResolved) return module.exports;
+    if (!module.isResolved) {
       module.isResolved = true;
-      module.factory(getRequire(module.path), module.exports, module);
-      return module.exports;
-    };
+      module.factory(require, module, module.exports);
+    }
+
+    return module.exports;
   };
 
-  return {
-    modules: modules,
-    define: define,
-    getRequire: getRequire,
-    require: getRequire('.')
+  require.async = function (path) {
+    return loads[path] || (
+      loads[path] = new Promise(function (resolve, reject) {
+        if (modules[path]) return resolve(require(path));
+
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = COGS_MANIFEST[path];
+        script.onload = function () {
+          try { resolve(require(path)); } catch (er) { reject(er); }
+        };
+        script.onerror = function () {
+          reject(new Error(`Cannot load '${path}'`));
+        };
+        document.head.appendChild(script);
+      })
+    );
   };
+
+  return {define: define, modules: modules, require: require};
 })();
-Cogs.define("test/bar.js", ["node_modules"], ["test/bar","test"], {}, function (require, exports, module) {
+Cogs.define("test/bar.js", function (COGS_REQUIRE, module, exports) {
 // This is bar!
-
 });
-Cogs.define("test/foo.bologna", ["node_modules"], ["test/foo"], {".":"test/bar.js"}, function (require, exports, module) {
+Cogs.define("test/foo.bologna", function (COGS_REQUIRE, module, exports) {
 // This is foo!
-require('.');
-
+COGS_REQUIRE("test/bar.js");
 });
-Cogs.define("test/baz.bologna", ["node_modules"], ["test/baz"], {}, function (require, exports, module) {
+Cogs.define("test/baz.bologna", function (COGS_REQUIRE, module, exports) {
 // This is baz!
-
 });
-Cogs.define("test/no-extension", ["node_modules"], ["test/no-extension"], {}, function (require, exports, module) {
+Cogs.define("test/no-extension", function (COGS_REQUIRE, module, exports) {
 // I have no extension =(
-
 });
-Cogs.define("test/one/1.js", ["node_modules"], ["test/one/1"], {"../foo":"test/foo.bologna"}, function (require, exports, module) {
-require('../foo');
-
+Cogs.define("test/one/1.js", function (COGS_REQUIRE, module, exports) {
+COGS_REQUIRE("test/foo.bologna");
 });
-Cogs.define("test/one/two/2.js", ["node_modules"], ["test/one/two/2"], {"../../foo":"test/foo.bologna"}, function (require, exports, module) {
-require('../../foo');
-
+Cogs.define("test/one/two/2.js", function (COGS_REQUIRE, module, exports) {
+COGS_REQUIRE("test/foo.bologna");
 });
-Cogs.define("test/one/two/three/3.js", ["node_modules"], ["test/one/two/three/3"], {"../../../foo":"test/foo.bologna"}, function (require, exports, module) {
-require('../../../foo');
-
+Cogs.define("test/input.js", function (COGS_REQUIRE, module, exports) {
+COGS_REQUIRE("test/foo.bologna");
+COGS_REQUIRE("test/bar.js");
+COGS_REQUIRE(SHOULD_BE_LEFT_AS_IDENTIFIER);
+COGS_REQUIRE("test/bar.js");
+COGS_REQUIRE("test/baz.bologna");
+undefined;
+COGS_REQUIRE("test/no-extension");
+COGS_REQUIRE("test/one/1.js");
+COGS_REQUIRE("test/one/two/2.js");
+COGS_REQUIRE.async("test/one/two/three/3.js");
+COGS_REQUIRE.async("test/foo.bologna");
 });
-Cogs.define("test/input.js", ["node_modules"], ["test/input"], {"./foo":"test/foo.bologna","./bar.js":"test/bar.js",".":"test/bar.js","baz":"test/baz.bologna","fs":false,"./no-extension":"test/no-extension","./one/1":"test/one/1.js","./one/two/2":"test/one/two/2.js","./one/two/three/3":"test/one/two/three/3.js"}, function (require, exports, module) {
-require('./foo');
-require('./bar.js');
-require(SHOULD_BE_DISREGARDED);
-require('.');
-require('baz');
-require('fs');
-require('./no-extension');
-require('./one/1');
-require('./one/two/2');
-require('./one/two/three/3');
-
-});
-Cogs.require("./test/input.js");
+Cogs.require("test/input.js");

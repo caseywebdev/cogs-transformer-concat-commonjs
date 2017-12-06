@@ -9,13 +9,15 @@
     "url": "https://github.com/caseywebdev/cogs-transformer-concat-commonjs"
   },
   "dependencies": {
-    "detective": "4",
-    "enhanced-resolve": "3",
+    "acorn": "5.2.1",
+    "acorn-dynamic-import": "2.0.2",
+    "enhanced-resolve": "4.0.0-beta.2",
     "npath": "1",
-    "underscore": "^1.8.3"
+    "underscore": "1.8.3"
   },
   "devDependencies": {
-    "cogs-test-helper": "3"
+    "cogs-test-helper": "3",
+    "react": "16"
   },
   "scripts": {
     "test": "cogs-test-helper test/test.js"
