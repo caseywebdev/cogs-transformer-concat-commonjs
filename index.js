@@ -17,6 +17,7 @@ const DEFAULTS = {
   aliasFields: ['browser'],
   extensions: ['.js'],
   mainFields: ['browser', 'main'],
+  manifestGlobal: 'COGS_MANIFEST',
   modules: ['node_modules']
 };
 
@@ -49,7 +50,7 @@ const getResolutions = async ({resolve, source}) =>
     };
   }));
 
-const applyResolutions = ({resolutions, source}) => {
+const applyResolutions = ({options: {manifestGlobal}, resolutions, source}) => {
   const builds = [];
   const requires = [];
   let cursor = 0;
@@ -61,34 +62,36 @@ const applyResolutions = ({resolutions, source}) => {
       if (result === null) {
         chunks.push('COGS_REQUIRE');
       } else if (result === false) {
-        chunks.push('undefined');
+        chunks.push('false');
       } else {
         requires.push(result);
         chunks.push(`COGS_REQUIRE(${JSON.stringify(result)})`);
       }
     } else if (result === null) {
-      chunks.push('COGS_REQUIRE.async');
+      chunks.push('COGS_REQUIRE_ASYNC');
     } else if (result === false) {
-      chunks.push('Promise.resolve()');
+      chunks.push('Promise.resolve(false)');
     } else {
       builds.push(result);
-      chunks.push(`COGS_REQUIRE.async(${JSON.stringify(result)})`);
+      chunks.push(
+        `COGS_REQUIRE_ASYNC(${JSON.stringify(result)}, ${manifestGlobal})`
+      );
     }
   });
   chunks.push(source.slice(cursor, source.length));
   return {builds, requires, source: chunks.join('')};
 };
 
-const applyResolve = async ({file, resolve}) => {
+const applyResolve = async ({file, options, resolve}) => {
   const source = file.buffer.toString();
   const resolutions = await getResolutions({resolve, source});
-  return applyResolutions({resolutions, source});
+  return applyResolutions({options, resolutions, source});
 };
 
 const wrap = ({entry, path, source}) =>
   'Cogs.define(' +
     `${JSON.stringify(path)}, ` +
-    'function (COGS_REQUIRE, module, exports) {\n' +
+    'function (COGS_REQUIRE, COGS_REQUIRE_ASYNC, module, exports) {\n' +
       `${source.trim()}\n` +
     '}' +
   ');\n' +
@@ -111,7 +114,8 @@ module.exports = async ({file, options}) => {
       )
     );
 
-  const {builds, requires, source} = await applyResolve({file, resolve});
+  const {builds, requires, source} =
+    await applyResolve({file, options, resolve});
   const requiresIndex = file.requires.indexOf(file.path);
   return {
     buffer: new Buffer(wrap({entry: options.entry, path: file.path, source})),

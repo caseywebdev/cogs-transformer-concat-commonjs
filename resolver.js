@@ -14,20 +14,20 @@ var Cogs = this && this.Cogs || (function () {
 
     if (!module.isResolved) {
       module.isResolved = true;
-      module.factory(require, module, module.exports);
+      module.factory(require, require.async, module, module.exports);
     }
 
     return module.exports;
   };
 
-  require.async = function (path) {
+  require.async = function (path, manifest) {
     return loads[path] || (
       loads[path] = new Promise(function (resolve, reject) {
         if (modules[path]) return resolve(require(path));
 
         const script = document.createElement('script');
         script.async = true;
-        script.src = COGS_MANIFEST[path];
+        script.src = manifest == null ? path : manifest[path];
         script.onload = function () {
           try { resolve(require(path)); } catch (er) { reject(er); }
         };
