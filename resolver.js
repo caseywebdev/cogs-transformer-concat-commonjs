@@ -10,7 +10,7 @@ var Cogs = this && this.Cogs || (function () {
 
   var require = function (path) {
     var module = modules[path];
-    if (!module) throw new Error(`Cannot find module '${path}'`);
+    if (!module) throw new Error("Cannot find module '" + path + "'");
 
     if (!module.isResolved) {
       module.isResolved = true;
@@ -25,14 +25,14 @@ var Cogs = this && this.Cogs || (function () {
       loads[path] = new Promise(function (resolve, reject) {
         if (modules[path]) return resolve(require(path));
 
-        const script = document.createElement('script');
+        var script = document.createElement('script');
         script.async = true;
         script.src = manifest == null ? path : manifest[path];
         script.onload = function () {
           try { resolve(require(path)); } catch (er) { reject(er); }
         };
         script.onerror = function () {
-          reject(new Error(`Cannot load '${path}'`));
+          reject(new Error("Cannot load '" + path + "'"));
         };
         document.head.appendChild(script);
       })
