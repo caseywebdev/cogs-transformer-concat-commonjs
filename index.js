@@ -1,14 +1,11 @@
 const _ = require('underscore');
 const {sep} = require('path');
-const acornDynamicImport = require('acorn-dynamic-import/lib/inject').default;
-const acornVanilla = require('acorn');
+const acorn = require('acorn-dynamic-import/lib/inject').default(require('acorn'));
 const createResolver = require('enhanced-resolve').create;
 const path = require('npath');
 const walk = require('acorn/dist/walk');
 
-const acorn = acornDynamicImport(acornVanilla);
-
-// HACK: See https://github.com/kesne/acorn-dynamic-import/pull/10
+// Add dynamic import support to walk.
 walk.base.Import = _.noop;
 
 const RESOLVER_PATH = path.relative('.', path.join(__dirname, 'resolver.js'));
