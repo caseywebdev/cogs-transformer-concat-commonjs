@@ -70,6 +70,7 @@ false;
 COGS_REQUIRE("test/no-extension");
 COGS_REQUIRE("test/one/1.js");
 COGS_REQUIRE("test/one/two/2.js");
+COGS_REQUIRE('ignore-me');
 COGS_REQUIRE_ASYNC("test/one/two/three/3.js", COGS_MANIFEST);
 COGS_REQUIRE_ASYNC("test/foo.bologna", COGS_MANIFEST);
 });

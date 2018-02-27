@@ -8,7 +8,8 @@
       ],
       "options": {
         "entry": "test/input.js",
-        "extensions": [".js", ".bologna"]
+        "extensions": [".js", ".bologna"],
+        "ignore": ["ignore-me"]
       }
     }
   ]

@@ -15,6 +15,7 @@ const RESOLVER_PATH = path.relative('.', path.join(__dirname, 'resolver.js'));
 const DEFAULTS = {
   aliasFields: ['browser'],
   extensions: ['.js'],
+  ignore: [],
   mainFields: ['browser', 'main'],
   manifestGlobal: 'COGS_MANIFEST',
   modules: ['node_modules']
@@ -109,9 +110,13 @@ module.exports = async ({file, options}) => {
   const basedir = path.dirname(path.resolve(file.path)).split('/').join(sep);
   const resolve = name =>
     new Promise((resolve, reject) =>
-      resolver(basedir, name, (er, filePath) =>
-        er ? reject(er) : resolve(filePath && path.relative('.', filePath))
-      )
+      resolver(basedir, name, (er, filePath) => {
+        if (!er) return resolve(filePath && path.relative('.', filePath));
+
+        if (options.ignore.includes(name)) return resolve(null);
+
+        reject(er);
+      })
     );
 
   const {builds, requires, source} =
