@@ -35,6 +35,9 @@ var Cogs = this && this.Cogs || (function () {
           reject(new Error("Cannot load '" + path + "'"));
         };
         document.head.appendChild(script);
+      }).catch(function (er) {
+        delete loads[path];
+        throw er;
       })
     );
   };
