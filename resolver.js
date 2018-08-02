@@ -12,9 +12,15 @@ var Cogs = this && this.Cogs || (function () {
     var module = modules[path];
     if (!module) throw new Error("Cannot find module '" + path + "'");
 
-    if (!module.isResolved) {
-      module.isResolved = true;
-      module.factory(require, require.async, module, module.exports);
+    var factory = module.factory;
+    if (factory) {
+      delete module.factory;
+      try {
+        factory(require, require.async, module, module.exports);
+      } catch (er) {
+        module.factory = factory;
+        throw er;
+      }
     }
 
     return module.exports;
