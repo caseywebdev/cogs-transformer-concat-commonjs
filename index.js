@@ -123,7 +123,7 @@ module.exports = async ({file, options}) => {
     await applyResolve({file, options, resolve});
   const requiresIndex = file.requires.indexOf(file.path);
   return {
-    buffer: new Buffer(wrap({entry: options.entry, path: file.path, source})),
+    buffer: Buffer.from(wrap({entry: options.entry, path: file.path, source})),
     builds: [].concat(file.builds, builds),
     requires: [].concat(
       file.requires.slice(0, requiresIndex),
