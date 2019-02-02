@@ -1,13 +1,13 @@
 const _ = require('underscore');
 const {sep} = require('path');
 const createResolver = require('enhanced-resolve').create;
-const injectAcornDI = require('acorn-dynamic-import/lib/inject').default;
-const injectWalkDI = require('acorn-dynamic-import/lib/walk').inject;
+const injectAcornDI = require('acorn-dynamic-import').default;
+const injectWalkDI = require('acorn-dynamic-import/lib/walk').default;
 const path = require('npath');
 const vanillaAcorn = require('acorn');
-const vanillaWalk = require('acorn/dist/walk');
+const vanillaWalk = require('acorn-walk');
 
-const acorn = injectAcornDI(vanillaAcorn);
+const acorn = vanillaAcorn.Parser.extend(injectAcornDI);
 const walk = injectWalkDI(vanillaWalk);
 
 const RESOLVER_PATH = path.relative('.', path.join(__dirname, 'resolver.js'));
@@ -35,7 +35,7 @@ const isImportNode = ({callee: {name, object, property, type}}) =>
 const getImportNodes = source => {
   const nodes = [];
   walk.simple(
-    acorn.parse(source, {ecmaVersion: 9, plugins: {dynamicImport: true}}),
+    acorn.parse(source, {ecmaVersion: 10}),
     {CallExpression: node => isImportNode(node) && nodes.push(node)},
     walk.base
   );
