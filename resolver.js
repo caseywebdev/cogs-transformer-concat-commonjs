@@ -5,6 +5,10 @@ var Cogs = this && this.Cogs || (function () {
   var loads = {};
 
   var define = function (path, factory) {
+    if (modules[path]) {
+      throw new Error("Module '" + path + "' is already defined");
+    }
+
     modules[path] = {exports: {}, factory: factory, path: path};
   };
 
