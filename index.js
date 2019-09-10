@@ -1,14 +1,9 @@
 const _ = require('underscore');
-const {sep} = require('path');
+const { sep } = require('path');
 const createResolver = require('enhanced-resolve').create;
-const injectAcornDI = require('acorn-dynamic-import').default;
-const injectWalkDI = require('acorn-dynamic-import/lib/walk').default;
 const path = require('npath');
-const vanillaAcorn = require('acorn');
-const vanillaWalk = require('acorn-walk');
-
-const acorn = vanillaAcorn.Parser.extend(injectAcornDI);
-const walk = injectWalkDI(vanillaWalk);
+const acorn = require('acorn');
+const walk = require('acorn-walk');
 
 const RESOLVER_PATH = path.relative('.', path.join(__dirname, 'resolver.js'));
 
@@ -21,45 +16,51 @@ const DEFAULTS = {
   modules: ['node_modules']
 };
 
-const isImportNode = ({callee: {name, object, property, type}}) =>
-  type === 'Import' ||
+const isImportNode = ({ callee: { name, object, property, type } }) =>
   (type === 'Identifier' && name === 'require') ||
-  (
-    type === 'MemberExpression' &&
+  (type === 'MemberExpression' &&
     object.type === 'Identifier' &&
     object.name === 'require' &&
     property.type === 'Identifier' &&
-    property.name === 'async'
-  );
+    property.name === 'async');
 
 const getImportNodes = source => {
   const nodes = [];
   walk.simple(
-    acorn.parse(source, {ecmaVersion: 10}),
-    {CallExpression: node => isImportNode(node) && nodes.push(node)},
+    acorn.parse(source, { ecmaVersion: 11 }),
+    {
+      CallExpression: node => isImportNode(node) && nodes.push(node),
+      ImportExpression: node => nodes.push(node)
+    },
     walk.base
   );
   return nodes;
 };
 
-const getResolutions = async ({resolve, source}) =>
-  Promise.all(_.map(getImportNodes(source), async node => {
-    const arg = node.arguments[0];
-    return {
-      node,
-      result: arg && _.isString(arg.value) ? await resolve(arg.value) : null
-    };
-  }));
+const getResolutions = ({ resolve, source }) =>
+  Promise.all(
+    _.map(getImportNodes(source), async node => {
+      const arg = node.arguments ? node.arguments[0] : node.source;
+      return {
+        node,
+        result: arg && _.isString(arg.value) ? await resolve(arg.value) : null
+      };
+    })
+  );
 
-const applyResolutions = ({options: {manifestGlobal}, resolutions, source}) => {
+const applyResolutions = ({
+  options: { manifestGlobal },
+  resolutions,
+  source
+}) => {
   const builds = [];
   const requires = [];
   let cursor = 0;
   const chunks = [];
-  _.each(resolutions, ({node, result}) => {
+  _.each(resolutions, ({ node, result }) => {
     chunks.push(source.slice(cursor, node.start));
     cursor = result === null ? node.callee.end : node.end;
-    if (node.callee.type === 'Identifier') {
+    if (node.callee && node.callee.type === 'Identifier') {
       if (result === null) {
         chunks.push('COGS_REQUIRE');
       } else if (result === false) {
@@ -80,26 +81,25 @@ const applyResolutions = ({options: {manifestGlobal}, resolutions, source}) => {
     }
   });
   chunks.push(source.slice(cursor, source.length));
-  return {builds, requires, source: chunks.join('')};
+  return { builds, requires, source: chunks.join('') };
 };
 
-const applyResolve = async ({file, options, resolve}) => {
+const applyResolve = async ({ file, options, resolve }) => {
   const source = file.buffer.toString();
-  const resolutions = await getResolutions({resolve, source});
-  return applyResolutions({options, resolutions, source});
+  const resolutions = await getResolutions({ resolve, source });
+  return applyResolutions({ options, resolutions, source });
 };
 
-const wrap = ({entry, path, source}) =>
+const wrap = ({ entry, path, source }) =>
   'Cogs.define(' +
-    `${JSON.stringify(path)}, ` +
-    'function (COGS_REQUIRE, COGS_REQUIRE_ASYNC, module, exports) {\n' +
-      `${source.trim()}\n` +
-    '}' +
+  `${JSON.stringify(path)}, ` +
+  'function (COGS_REQUIRE, COGS_REQUIRE_ASYNC, module, exports) {\n' +
+  `${source.trim()}\n` +
+  '}' +
   ');\n' +
   (entry === path ? `Cogs.require(${JSON.stringify(path)});\n` : '');
 
-module.exports = async ({file, options}) => {
-
+module.exports = async ({ file, options }) => {
   // Avoid an infinite loop by not resolving the resolver.
   if (file.path === RESOLVER_PATH) return;
 
@@ -107,7 +107,10 @@ module.exports = async ({file, options}) => {
   const resolver = createResolver(options);
 
   // enhanced-resolve requires the input basedir to be split on path.sep...
-  const basedir = path.dirname(path.resolve(file.path)).split('/').join(sep);
+  const basedir = path
+    .dirname(path.resolve(file.path))
+    .split('/')
+    .join(sep);
   const resolve = name =>
     new Promise((resolve, reject) =>
       resolver(basedir, name, (er, filePath) => {
@@ -119,11 +122,16 @@ module.exports = async ({file, options}) => {
       })
     );
 
-  const {builds, requires, source} =
-    await applyResolve({file, options, resolve});
+  const { builds, requires, source } = await applyResolve({
+    file,
+    options,
+    resolve
+  });
   const requiresIndex = file.requires.indexOf(file.path);
   return {
-    buffer: Buffer.from(wrap({entry: options.entry, path: file.path, source})),
+    buffer: Buffer.from(
+      wrap({ entry: options.entry, path: file.path, source })
+    ),
     builds: [].concat(file.builds, builds),
     requires: [].concat(
       file.requires.slice(0, requiresIndex),
