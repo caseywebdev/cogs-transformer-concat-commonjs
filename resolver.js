@@ -58,7 +58,9 @@ var Cogs = this && this.Cogs || (function () {
 
         var srcs = manifest == null ? path : manifest[path]
         if (!Array.isArray(srcs)) srcs = [srcs];
-        Promise.all(srcs.map(fetch)).then(() => resolve(path)).catch(reject);
+        Promise.all(srcs.map(fetch))
+          .then(() => resolve(require(path)))
+          .catch(reject);
       }).catch(function (er) {
         delete modulePromises[path];
         throw er;
