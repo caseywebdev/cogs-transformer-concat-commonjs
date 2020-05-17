@@ -1,11 +1,11 @@
 const _ = require('underscore');
+
 const { sep } = require('path');
+
 const createResolver = require('enhanced-resolve').create;
-const path = require('npath');
 const acorn = require('acorn');
 const walk = require('acorn-walk');
-
-const RESOLVER_PATH = path.relative('.', path.join(__dirname, 'resolver.js'));
+const path = require('npath');
 
 const DEFAULTS = {
   aliasFields: ['browser'],
@@ -90,19 +90,15 @@ const applyResolve = async ({ file, options, resolve }) => {
   return applyResolutions({ options, resolutions, source });
 };
 
-const wrap = ({ entry, path, source }) =>
+const wrap = ({ path, source }) =>
   'Cogs.define(' +
   `${JSON.stringify(path)}, ` +
   'function (COGS_REQUIRE, COGS_REQUIRE_ASYNC, module, exports) {\n' +
   `${source.trim()}\n` +
   '}' +
-  ');\n' +
-  (entry === path ? `Cogs.require(${JSON.stringify(path)});\n` : '');
+  ');\n';
 
 module.exports = async ({ file, options }) => {
-  // Avoid an infinite loop by not resolving the resolver.
-  if (file.path === RESOLVER_PATH) return;
-
   options = _.extend({}, DEFAULTS, options);
   const resolver = createResolver(options);
 
@@ -129,13 +125,10 @@ module.exports = async ({ file, options }) => {
   });
   const requiresIndex = file.requires.indexOf(file.path);
   return {
-    buffer: Buffer.from(
-      wrap({ entry: options.entry, path: file.path, source })
-    ),
+    buffer: Buffer.from(wrap({ path: file.path, source })),
     builds: [].concat(file.builds, builds),
     requires: [].concat(
       file.requires.slice(0, requiresIndex),
-      RESOLVER_PATH,
       requires,
       file.requires.slice(requiresIndex)
     )

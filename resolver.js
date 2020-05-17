@@ -1,8 +1,9 @@
 var Cogs = this && this.Cogs || (function () {
   'use strict';
 
+  var fetches = {};
+  var modulePromises = {};
   var modules = {};
-  var loads = {};
 
   var define = function (path, factory) {
     if (modules[path]) {
@@ -30,23 +31,36 @@ var Cogs = this && this.Cogs || (function () {
     return module.exports;
   };
 
-  require.async = function (path, manifest) {
-    return loads[path] || (
-      loads[path] = new Promise(function (resolve, reject) {
-        if (modules[path]) return resolve(require(path));
-
+  var fetch = function (src) {
+    return fetches[src] || (
+      fetches[src] = new Promise(function (resolve, reject) {
         var script = document.createElement('script');
         script.async = true;
-        script.src = manifest == null ? path : manifest[path];
+        script.src = src;
         script.onload = function () {
-          try { resolve(require(path)); } catch (er) { reject(er); }
+          try { resolve(); } catch (er) { reject(er); }
         };
         script.onerror = function () {
-          reject(new Error("Cannot load '" + path + "'"));
+          reject(new Error("Cannot load '" + src + "'"));
         };
         document.head.appendChild(script);
       }).catch(function (er) {
-        delete loads[path];
+        delete fetches[src];
+        throw er;
+      })
+    );
+  };
+
+  require.async = function (path, manifest) {
+    return modulePromises[path] || (
+      modulePromises[path] = new Promise(function (resolve, reject) {
+        if (modules[path]) return resolve(require(path));
+
+        var srcs = manifest == null ? path : manifest[path]
+        if (!Array.isArray(srcs)) srcs = [srcs];
+        Promise.all(srcs.map(fetch)).then(() => resolve(path)).catch(reject);
+      }).catch(function (er) {
+        delete modulePromises[path];
         throw er;
       })
     );
