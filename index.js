@@ -97,7 +97,7 @@ const wrap = ({ path, source }) =>
   ');\n';
 
 export default async ({ file, options }) => {
-  options = {...DEFAULTS, ...options};
+  options = { ...DEFAULTS, ...options };
   const resolver = enhancedResolve.create(options);
 
   const basedir = path.dirname(path.resolve(file.path));
