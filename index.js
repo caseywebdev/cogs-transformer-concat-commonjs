@@ -1,11 +1,8 @@
-const _ = require('underscore');
+import path from 'path';
 
-const { sep } = require('path');
-
-const createResolver = require('enhanced-resolve').create;
-const acorn = require('acorn');
-const walk = require('acorn-walk');
-const path = require('npath');
+import * as acorn from 'acorn';
+import * as walk from 'acorn-walk';
+import enhancedResolve from 'enhanced-resolve';
 
 const DEFAULTS = {
   aliasFields: ['browser'],
@@ -39,11 +36,12 @@ const getImportNodes = source => {
 
 const getResolutions = ({ resolve, source }) =>
   Promise.all(
-    _.map(getImportNodes(source), async node => {
+    getImportNodes(source).map(async node => {
       const arg = node.arguments ? node.arguments[0] : node.source;
       return {
         node,
-        result: arg && _.isString(arg.value) ? await resolve(arg.value) : null
+        result:
+          arg && typeof arg.value === 'string' ? await resolve(arg.value) : null
       };
     })
   );
@@ -57,7 +55,7 @@ const applyResolutions = ({
   const requires = [];
   let cursor = 0;
   const chunks = [];
-  _.each(resolutions, ({ node, result }) => {
+  for (const { node, result } of resolutions) {
     chunks.push(source.slice(cursor, node.start));
     cursor = result === null ? node.callee.end : node.end;
     if (node.callee && node.callee.type === 'Identifier') {
@@ -79,7 +77,7 @@ const applyResolutions = ({
         `COGS_REQUIRE_ASYNC(${JSON.stringify(result)}, ${manifestGlobal})`
       );
     }
-  });
+  }
   chunks.push(source.slice(cursor, source.length));
   return { builds, requires, source: chunks.join('') };
 };
@@ -98,15 +96,11 @@ const wrap = ({ path, source }) =>
   '}' +
   ');\n';
 
-module.exports = async ({ file, options }) => {
-  options = _.extend({}, DEFAULTS, options);
-  const resolver = createResolver(options);
+export default async ({ file, options }) => {
+  options = {...DEFAULTS, ...options};
+  const resolver = enhancedResolve.create(options);
 
-  // enhanced-resolve requires the input basedir to be split on path.sep...
-  const basedir = path
-    .dirname(path.resolve(file.path))
-    .split('/')
-    .join(sep);
+  const basedir = path.dirname(path.resolve(file.path));
   const resolve = name =>
     new Promise((resolve, reject) =>
       resolver(basedir, name, (er, filePath) => {

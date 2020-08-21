@@ -1,22 +1,21 @@
 {
   "name": "cogs-transformer-concat-commonjs",
-  "version": "3.5.2",
+  "version": "3.5.3",
   "author": "Casey Foster <c@sey.me>",
   "description": "A CommonJS concatenation transformer for Cogs.",
   "license": "MIT",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/caseywebdev/cogs-transformer-concat-commonjs"
   },
   "dependencies": {
-    "acorn": "7",
-    "acorn-walk": "7",
-    "enhanced-resolve": "4",
-    "npath": "1",
-    "underscore": "1"
+    "acorn": "8",
+    "acorn-walk": "8",
+    "enhanced-resolve": "4"
   },
   "devDependencies": {
-    "cogs-test-helper": "3",
+    "cogs-test-helper": "4",
     "react": "16"
   },
   "scripts": {
