@@ -1,6 +1,4 @@
-var Cogs = this && this.Cogs || (function () {
-  'use strict';
-
+var Cogs = (function () {
   var fetches = {};
   var modulePromises = {};
   var modules = {};
@@ -10,7 +8,7 @@ var Cogs = this && this.Cogs || (function () {
       throw new Error("Module '" + path + "' is already defined");
     }
 
-    modules[path] = {exports: {}, factory: factory, path: path};
+    modules[path] = { exports: {}, factory: factory, path: path };
   };
 
   var require = function (path) {
@@ -32,13 +30,18 @@ var Cogs = this && this.Cogs || (function () {
   };
 
   var fetch = function (src) {
-    return fetches[src] || (
-      fetches[src] = new Promise(function (resolve, reject) {
+    return (
+      fetches[src] ||
+      (fetches[src] = new Promise(function (resolve, reject) {
         var script = document.createElement('script');
         script.async = true;
         script.src = src;
         script.onload = function () {
-          try { resolve(); } catch (er) { reject(er); }
+          try {
+            resolve();
+          } catch (er) {
+            reject(er);
+          }
         };
         script.onerror = function () {
           reject(new Error("Cannot load '" + src + "'"));
@@ -47,26 +50,29 @@ var Cogs = this && this.Cogs || (function () {
       }).catch(function (er) {
         delete fetches[src];
         throw er;
-      })
+      }))
     );
   };
 
   require.async = function (path, manifest) {
-    return modulePromises[path] || (
-      modulePromises[path] = new Promise(function (resolve, reject) {
+    return (
+      modulePromises[path] ||
+      (modulePromises[path] = new Promise(function (resolve, reject) {
         if (modules[path]) return resolve(require(path));
 
-        var srcs = manifest == null ? path : manifest[path]
+        var srcs = manifest == null ? path : manifest[path];
         if (!Array.isArray(srcs)) srcs = [srcs];
         Promise.all(srcs.map(fetch))
-          .then(function () { return resolve(require(path)); })
+          .then(function () {
+            return resolve(require(path));
+          })
           .catch(reject);
       }).catch(function (er) {
         delete modulePromises[path];
         throw er;
-      })
+      }))
     );
   };
 
-  return {define: define, modules: modules, require: require};
+  return { define: define, modules: modules, require: require };
 })();

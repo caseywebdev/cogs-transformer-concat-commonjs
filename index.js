@@ -1,8 +1,14 @@
 import path from 'path';
+import url from 'url';
 
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
 import enhancedResolve from 'enhanced-resolve';
+
+const RESOLVER_PATH = path.relative(
+  '.',
+  path.join(path.dirname(url.fileURLToPath(import.meta.url)), 'resolver.js')
+);
 
 const DEFAULTS = {
   aliasFields: ['browser'],
@@ -88,15 +94,18 @@ const applyResolve = async ({ file, options, resolve }) => {
   return applyResolutions({ options, resolutions, source });
 };
 
-const wrap = ({ path, source }) =>
+const wrap = ({ isEntry, path, source }) =>
   'Cogs.define(' +
   `${JSON.stringify(path)}, ` +
   'function (COGS_REQUIRE, COGS_REQUIRE_ASYNC, module, exports) {\n' +
   `${source.trim()}\n` +
   '}' +
-  ');\n';
+  ');\n' +
+  (isEntry ? `Cogs.require(${JSON.stringify(path)});\n` : '');
 
 export default async ({ file, options }) => {
+  if (file.path === RESOLVER_PATH) return;
+
   options = { ...DEFAULTS, ...options };
   const resolver = enhancedResolve.create(options);
 
@@ -119,10 +128,13 @@ export default async ({ file, options }) => {
   });
   const requiresIndex = file.requires.indexOf(file.path);
   return {
-    buffer: Buffer.from(wrap({ path: file.path, source })),
+    buffer: Buffer.from(
+      wrap({ isEntry: options.entry === file.path, path: file.path, source })
+    ),
     builds: [].concat(file.builds, builds),
     requires: [].concat(
       file.requires.slice(0, requiresIndex),
+      RESOLVER_PATH,
       requires,
       file.requires.slice(requiresIndex)
     )
