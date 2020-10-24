@@ -1,4 +1,6 @@
 var Cogs = (function () {
+  'use strict';
+
   var fetches = {};
   var modulePromises = {};
   var modules = {};
