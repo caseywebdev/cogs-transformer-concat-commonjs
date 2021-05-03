@@ -30,7 +30,7 @@ const isImportNode = ({ callee: { name, object, property, type } }) =>
 const getImportNodes = source => {
   const nodes = [];
   walk.simple(
-    acorn.parse(source, { ecmaVersion: 11 }),
+    acorn.parse(source, { ecmaVersion: 2021 }),
     {
       CallExpression: node => isImportNode(node) && nodes.push(node),
       ImportExpression: node => nodes.push(node)
