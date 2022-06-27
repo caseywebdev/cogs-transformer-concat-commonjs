@@ -22,9 +22,9 @@ var Cogs = (function () {
       delete module.factory;
       try {
         factory(require, require.async, module, module.exports);
-      } catch (er) {
+      } catch (error) {
         module.factory = factory;
-        throw er;
+        throw error;
       }
     }
 
@@ -38,20 +38,20 @@ var Cogs = (function () {
         var script = document.createElement('script');
         script.async = true;
         script.src = src;
-        script.onload = function () {
+        script.addEventListener('load', function () {
           try {
             resolve();
-          } catch (er) {
-            reject(er);
+          } catch (error) {
+            reject(error);
           }
-        };
-        script.onerror = function () {
-          reject(new Error("Cannot load '" + src + "'"));
-        };
+        });
+        script.addEventListener('error', function (event) {
+          reject(event.error);
+        });
         document.head.appendChild(script);
-      }).catch(function (er) {
+      }).catch(function (error) {
         delete fetches[src];
-        throw er;
+        throw error;
       }))
     );
   };
@@ -69,9 +69,9 @@ var Cogs = (function () {
             return resolve(require(path));
           })
           .catch(reject);
-      }).catch(function (er) {
+      }).catch(function (error) {
         delete modulePromises[path];
-        throw er;
+        throw error;
       }))
     );
   };
