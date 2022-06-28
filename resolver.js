@@ -45,8 +45,8 @@ var Cogs = (function () {
             reject(error);
           }
         });
-        script.addEventListener('error', function (event) {
-          reject(event.error);
+        script.addEventListener('error', function () {
+          reject(new Error("Failed to load '" + src + "'"));
         });
         document.head.appendChild(script);
       }).catch(function (error) {
