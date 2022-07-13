@@ -12,6 +12,7 @@ const RESOLVER_PATH = path.relative(
 
 const DEFAULTS = {
   aliasFields: ['browser'],
+  conditionNames: ['require'],
   extensions: ['.js'],
   ignore: [],
   mainFields: ['browser', 'main'],
