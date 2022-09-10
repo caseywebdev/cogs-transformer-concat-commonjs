@@ -75,6 +75,7 @@ var Cogs = (function () {
     var deferred = asyncs[path];
     if (deferred && deferred.status !== 'rejected') return deferred.promise;
 
+    deferred = asyncs[path] = createDeferred();
     var srcs = manifest == null ? path : manifest[path];
     if (!Array.isArray(srcs)) srcs = [srcs];
     Promise.all(srcs.map(fetch))

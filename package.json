@@ -1,6 +1,6 @@
 {
   "name": "cogs-transformer-concat-commonjs",
-  "version": "3.5.13",
+  "version": "3.5.14",
   "author": "Casey Foster <c@sey.me>",
   "description": "A CommonJS concatenation transformer for Cogs.",
   "license": "MIT",
