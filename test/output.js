@@ -67,6 +67,7 @@ var Cogs = (function () {
       deferred.reject(new Error("Failed to load '" + src + "'"));
     });
     document.head.appendChild(script);
+    deferred.promise.finally(() => script.remove());
     return deferred.promise;
   };
 
@@ -74,22 +75,13 @@ var Cogs = (function () {
     var deferred = asyncs[path];
     if (deferred && deferred.status !== 'rejected') return deferred.promise;
 
-    deferred = asyncs[path] = createDeferred();
-    if (modules[path]) {
-      try {
-        deferred.resolve(require(path));
-      } catch (error) {
-        deferred.reject(error);
-      }
-    } else {
-      var srcs = manifest == null ? path : manifest[path];
-      if (!Array.isArray(srcs)) srcs = [srcs];
-      Promise.all(srcs.map(fetch))
-        .then(function () {
-          return deferred.resolve(require(path));
-        })
-        .catch(deferred.reject);
-    }
+    var srcs = manifest == null ? path : manifest[path];
+    if (!Array.isArray(srcs)) srcs = [srcs];
+    Promise.all(srcs.map(fetch))
+      .then(function () {
+        return deferred.resolve(require(path));
+      })
+      .catch(deferred.reject);
     return deferred.promise;
   };
 
