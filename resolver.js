@@ -1,23 +1,16 @@
-var Cogs = (function () {
-  'use strict';
+const Cogs = (() => {
+  const modules = {};
+  const define = (path, factory) => {
+    if (modules[path]) throw new Error(`Module '${path}' is already defined`);
 
-  var asyncs = {};
-  var fetches = {};
-  var modules = {};
-
-  var define = function (path, factory) {
-    if (modules[path]) {
-      throw new Error("Module '" + path + "' is already defined");
-    }
-
-    modules[path] = { exports: {}, factory: factory, path: path };
+    modules[path] = { exports: {}, factory, path };
   };
 
-  var require = function (path) {
-    var module = modules[path];
-    if (!module) throw new Error("Cannot find module '" + path + "'");
+  const require = path => {
+    const module = modules[path];
+    if (!module) throw new Error(`Cannot find module '${path}'`);
 
-    var factory = module.factory;
+    const factory = module.factory;
     if (factory) {
       delete module.factory;
       try {
@@ -31,60 +24,19 @@ var Cogs = (function () {
     return module.exports;
   };
 
-  window.addEventListener('error', function (event) {
-    var deferred = fetches[event.filename];
-    if (deferred && deferred.status === 'pending') deferred.reject(event.error);
-  });
+  const asyncs = {};
+  require.async = (path, manifest) => {
+    if (asyncs[path]) return asyncs[path];
 
-  var createDeferred = function () {
-    var deferred = { status: 'pending' };
-    deferred.promise = new Promise(function (_resolve, _reject) {
-      deferred.resolve = function (value) {
-        if (deferred.status === 'pending') {
-          deferred.status = 'fulfilled';
-          _resolve(value);
-        }
-      };
-      deferred.reject = function (value) {
-        if (deferred.status === 'pending') {
-          deferred.status = 'rejected';
-          _reject(value);
-        }
-      };
-    });
-    return deferred;
-  };
-
-  var fetch = function (src) {
-    var script = document.createElement('script');
-    script.src = src;
-    var deferred = fetches[script.src];
-    if (deferred && deferred.status !== 'rejected') return deferred.promise;
-
-    deferred = fetches[script.src] = createDeferred();
-    script.addEventListener('load', deferred.resolve);
-    script.addEventListener('error', function () {
-      deferred.reject(new Error("Failed to load '" + src + "'"));
-    });
-    document.head.appendChild(script);
-    deferred.promise.finally(() => script.remove());
-    return deferred.promise;
-  };
-
-  require.async = function (path, manifest) {
-    var deferred = asyncs[path];
-    if (deferred && deferred.status !== 'rejected') return deferred.promise;
-
-    deferred = asyncs[path] = createDeferred();
-    var srcs = manifest == null ? path : manifest[path];
+    let srcs = manifest == null ? path : manifest[path];
     if (!Array.isArray(srcs)) srcs = [srcs];
-    Promise.all(srcs.map(fetch))
-      .then(function () {
-        return deferred.resolve(require(path));
-      })
-      .catch(deferred.reject);
-    return deferred.promise;
+    return (asyncs[path] = Promise.all(srcs.map(src => import(src)))
+      .then(() => require(path))
+      .catch(error => {
+        delete asyncs[path];
+        throw error;
+      }));
   };
 
-  return { define: define, modules: modules, require: require };
+  return { define, modules, require };
 })();
