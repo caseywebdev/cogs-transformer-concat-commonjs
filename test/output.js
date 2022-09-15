@@ -72,5 +72,6 @@ COGS_REQUIRE("test/one/two/2.js");
 COGS_REQUIRE('ignore-me');
 COGS_REQUIRE_ASYNC("test/one/two/three/3.js", COGS_MANIFEST);
 COGS_REQUIRE_ASYNC("test/foo.bologna", COGS_MANIFEST);
+import(SHOULD_BE_LEFT_AS_IDENTIFIER);
 });
 Cogs.require("test/input.js");

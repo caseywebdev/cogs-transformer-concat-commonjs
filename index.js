@@ -34,7 +34,8 @@ const getImportNodes = source => {
     acorn.parse(source, { ecmaVersion: 2021, sourceType: 'module' }),
     {
       CallExpression: node => isImportNode(node) && nodes.push(node),
-      ImportExpression: node => nodes.push(node)
+      ImportExpression: node =>
+        typeof node.source.value === 'string' && nodes.push(node)
     },
     walk.base
   );
