@@ -5,6 +5,8 @@ import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
 import enhancedResolve from 'enhanced-resolve';
 
+const { Buffer, Promise } = globalThis;
+
 const resolverPath = path.relative(
   '.',
   path.join(path.dirname(url.fileURLToPath(import.meta.url)), 'resolver.js')
@@ -48,7 +50,7 @@ const getResolutions = ({ resolve, source }) =>
     })
   );
 
-const applyResolutions = ({ resolutions, resolverGlobal, source }) => {
+const applyResolutions = ({ resolutions, source }) => {
   const builds = [];
   const requires = [];
   let cursor = 0;
@@ -57,17 +59,17 @@ const applyResolutions = ({ resolutions, resolverGlobal, source }) => {
     chunks.push(source.slice(cursor, node.start));
     cursor = result === null ? node.callee.end : node.end;
     if (node.callee) {
-      if (result === null) chunks.push(`${resolverGlobal}.require`);
+      if (result === null) chunks.push('require');
       else if (result === false) chunks.push('false');
       else {
         requires.push(result);
-        chunks.push(`${resolverGlobal}.require(${JSON.stringify(result)})`);
+        chunks.push(`require(${JSON.stringify(result)})`);
       }
-    } else if (result === null) chunks.push(`${resolverGlobal}.import`);
+    } else if (result === null) chunks.push('import');
     else if (result === false) chunks.push('Promise.resolve(false)');
     else {
       builds.push(result);
-      chunks.push(`${resolverGlobal}.import(${JSON.stringify(result)})`);
+      chunks.push(`__import(${JSON.stringify(result)})`);
     }
   }
   chunks.push(source.slice(cursor, source.length));
@@ -75,7 +77,7 @@ const applyResolutions = ({ resolutions, resolverGlobal, source }) => {
 };
 
 const resolve = async ({ file, options }) => {
-  const { ignore, resolverGlobal } = options;
+  const { ignore } = options;
   const resolver = enhancedResolve.create(options);
 
   const basedir = path.dirname(path.resolve(file.path));
@@ -93,7 +95,7 @@ const resolve = async ({ file, options }) => {
   const source = file.buffer.toString();
   const resolutions = await getResolutions({ resolve, source });
 
-  return await applyResolutions({ resolutions, resolverGlobal, source });
+  return await applyResolutions({ resolutions, source });
 };
 
 const wrap = ({ file, options: { entry, resolverGlobal }, source }) => {
@@ -102,7 +104,7 @@ const wrap = ({ file, options: { entry, resolverGlobal }, source }) => {
     : entry === file.path;
   const path = JSON.stringify(file.path);
   return (
-    `${resolverGlobal}.define(${path}, (module, exports) => {\n` +
+    `${resolverGlobal}.define(${path}, (module, exports, require, __import) => {\n` +
     `${source.trim()}\n` +
     '});\n' +
     (isEntry ? `${resolverGlobal}.require(${path});\n` : '')
