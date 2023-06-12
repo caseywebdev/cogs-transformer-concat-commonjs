@@ -27,14 +27,14 @@
     return module.exports;
   });
 
-  const asyncs = {};
+  const imports = {};
   const _import = (resolver.import = path => {
-    if (asyncs[path]) return asyncs[path];
+    if (imports[path]) return imports[path];
 
-    return (asyncs[path] = Promise.all(manifest[path].map(src => import(src)))
+    return (imports[path] = Promise.all(manifest[path].map(src => import(src)))
       .then(() => require(path))
       .catch(error => {
-        delete asyncs[path];
+        delete imports[path];
         throw error;
       }));
   });
