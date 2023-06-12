@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "cogs-test-helper": "4",
-    "react": "17"
+    "react": "18"
   },
   "scripts": {
     "test": "cogs-test-helper test/test.js"
