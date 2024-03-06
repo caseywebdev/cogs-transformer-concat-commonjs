@@ -1,9 +1,8 @@
 import path from 'path';
 import url from 'url';
 
-import * as acorn from 'acorn';
-import * as walk from 'acorn-walk';
 import enhancedResolve from 'enhanced-resolve';
+import oxc from 'oxc-parser';
 
 const { Buffer, Promise } = globalThis;
 
@@ -22,30 +21,42 @@ const defaults = {
   resolverGlobal: 'Cogs'
 };
 
-const getImportNodes = source => {
+const getImportNodes = async source => {
+  const { program, errors } = await oxc.parseAsync(source);
+
+  if (errors.length) throw new Error(errors[0]);
+
   const nodes = [];
-  walk.simple(
-    acorn.parse(source, { ecmaVersion: 2022, sourceType: 'module' }),
-    {
-      CallExpression: node =>
+
+  const walk = node => {
+    if (
+      (node.type === 'CallExpression' &&
         node.callee.type === 'Identifier' &&
-        node.callee.name === 'require' &&
-        nodes.push(node),
-      ImportExpression: node =>
-        typeof node.source.value === 'string' && nodes.push(node)
-    },
-    walk.base
-  );
+        node.callee.name === 'require') ||
+      (node.type === 'ImportExpression' &&
+        typeof node.source.value === 'string')
+    ) {
+      nodes.push(node);
+    }
+
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) value.forEach(walk);
+      else if (typeof value === 'object' && value !== null) walk(value);
+    }
+  };
+
+  walk(JSON.parse(program));
+
   return nodes;
 };
 
-const getResolutions = ({ resolve, source }) =>
-  Promise.all(
-    getImportNodes(source).map(async node => {
-      const arg = node.arguments ? node.arguments[0] : node.source;
+const getResolutions = async ({ resolve, source }) =>
+  await Promise.all(
+    (await getImportNodes(source)).map(async node => {
+      const arg = node.source ?? node.arguments[0];
       return {
         node,
-        result: typeof arg?.value === 'string' ? await resolve(arg.value) : null
+        result: arg.type === 'StringLiteral' ? await resolve(arg.value) : null
       };
     })
   );
