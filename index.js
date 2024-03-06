@@ -3,7 +3,7 @@ import url from 'url';
 
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
-import enhancedResolve from 'enhanced-resolve';
+import { ResolverFactory } from 'oxc-resolver';
 
 const { Buffer, Promise } = globalThis;
 
@@ -78,19 +78,19 @@ const applyResolutions = ({ resolutions, source }) => {
 
 const resolve = async ({ file, options }) => {
   const { ignore } = options;
-  const resolver = enhancedResolve.create(options);
+  const resolver = new ResolverFactory(options);
 
   const basedir = path.dirname(path.resolve(file.path));
-  const resolve = name =>
-    new Promise((resolve, reject) =>
-      resolver(basedir, name, (er, filePath) => {
-        if (!er) return resolve(filePath && path.relative('.', filePath));
+  const resolve = name => {
+    const { error, path: filePath } = resolver.sync(basedir, name);
+    if (!error) return path.relative('.', filePath);
 
-        if (ignore.includes(name)) return resolve(null);
+    if (error.startsWith('Path is ignored ')) return false;
 
-        reject(er);
-      })
-    );
+    if (ignore.includes(name)) return null;
+
+    throw new Error(error);
+  };
 
   const source = file.buffer.toString();
   const resolutions = await getResolutions({ resolve, source });
