@@ -29,6 +29,10 @@ const getImportNodes = async source => {
   const nodes = [];
 
   const walk = node => {
+    if (!node || typeof node !== 'object') return;
+
+    if (Array.isArray(node)) return node.forEach(walk);
+
     if (
       (node.type === 'CallExpression' &&
         node.callee.type === 'Identifier' &&
@@ -39,10 +43,7 @@ const getImportNodes = async source => {
       nodes.push(node);
     }
 
-    for (const value of Object.values(node)) {
-      if (Array.isArray(value)) value.forEach(walk);
-      else if (typeof value === 'object' && value !== null) walk(value);
-    }
+    Object.values(node).forEach(walk);
   };
 
   walk(JSON.parse(program));
